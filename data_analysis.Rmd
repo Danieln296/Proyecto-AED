@@ -1,0 +1,268 @@
+---
+title: "Red Blood Cells"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Debemos leer primero los datos
+
+```{r}
+
+dat <- read.csv("RBC_Drepanocitos_Esferocitos.csv", header = TRUE)
+dat$etiquetas <- as.factor(dat$etiquetas)
+
+head(dat)
+
+
+
+```
+
+
+
+```{r}
+
+pca.dat <- princomp(dat[,2:29], cor = TRUE)
+summary(pca.dat)
+
+```
+
+Observe que son necesarias 8 componentes principales para obtener el 92% de la varianza de los datos. Así pues, obtenemos las 8 componentes.
+
+```{r}
+
+pca.8 <- pca.dat$scores[,1:8]
+head(pca.8)
+
+```
+
+Dados los scores de las primeras 8 componentes principales, 
+
+```{r}
+library(MASS)
+```
+
+```{r}
+
+lda.fit <- lda(pca.8, dat$etiquetas)
+lda.fit
+
+```
+```{r}
+lda.pred_total <- predict(lda.fit, pca.8[,1:8])
+
+(lda_conf_matrix <- table(dat$etiquetas, lda.pred_total$class))
+
+```
+Ahora, calculemos la probabilidad estimada de que un glóbulo rojo sea categorizado de forma erronea.
+
+```{r}
+
+# Clasificación incorrecta de Drepanocito
+(lda_p_inc_drep <- sum(lda_conf_matrix[2:3,1])/sum(lda_conf_matrix[,1]))
+
+# Clasificación incorrecta de Esferocito
+(lda_p_inc_esfe <- (lda_conf_matrix[1,2] + lda_conf_matrix[3,2])/sum(lda_conf_matrix[,2]))
+
+# Clasificación incorrecta de Normal
+(lda_p_inc_norm <- sum(lda_conf_matrix[1:2,3])/sum(lda_conf_matrix[,3]))
+
+# Error de clasificación incorrecta
+(lda_error <- lda_p_inc_drep + lda_p_inc_esfe + lda_p_inc_norm)
+```
+Note que la probabilidad de que se clasifique de manera erronea un Esferocito es la más alta, incluso es casi el doble o más que las demás probabilidades, por lo que se puede afirmar que es más probable clasificar erroneamente un globulo como Esferocito que como las demás clases.
+Es decir que el error de clasificación para un Esferocito es mayor que para los otros.
+
+Esto indica que de acuerdo ...................... bla bla bla
+
+Ahora bien, veamos que sucede cuando sea hace un discriminación cuadrática.
+
+```{r}
+
+qda.fit <- qda(pca.8, dat$etiquetas)
+qda.fit
+
+```
+```{r}
+qda.pred_total <- predict(qda.fit, pca.8[,1:8])
+
+(qda_conf_matrix <- table(dat$etiquetas, qda.pred_total$class))
+
+```
+
+```{r}
+
+# Clasificación incorrecta de Drepanocito
+(qda_p_inc_drep <- sum(qda_conf_matrix[2:3,1])/sum(qda_conf_matrix[,1]))
+
+# Clasificación incorrecta de Esferocito
+(qda_p_inc_esfe <- (qda_conf_matrix[1,2] + qda_conf_matrix[3,2])/sum(qda_conf_matrix[,2]))
+
+# Clasificación incorrecta de Normal
+(qda_p_inc_norm <- sum(qda_conf_matrix[1:2,3])/sum(qda_conf_matrix[,3]))
+
+# Error de clasificación incorrecta
+(qda_error <- qda_p_inc_drep + qda_p_inc_esfe + qda_p_inc_norm)
+```
+Veamos cual de los dos discriminantes tiene el mayor error
+
+```{r}
+(qda_error < lda_error)
+```
+Ahora calculemos la diferencia entre estos dos errores.
+
+```{r}
+(discriminante_error_dif <- qda_error - lda_error)
+```
+Observe que la diferencia en el error entre los dos tipos de discriminación es bastante pequeña, por lo que se puede afirmar que con cualquiera de las dos discriminaciones se tendrá un error muy parecido, y como se vió anteriormente, este error supera el 25%. Ahora bien, note que en la discriminación cuadrática se tiene que los errores de clasificación para cada uno de los tipos de globulos son las siguientes:
+
+| Tipo  | Error |
+|:---:|:---:|
+| Drepanocitos  | 0.04007286  |
+| Esferocitos  | 0.1139896 |
+| Normal  | 0.1041667  |
+
+Las cuales son mayores que las de la discriminación lineal puesto que esta última arroja los siguientes errores:
+
+| Tipo  | Error |
+|:---:|:---:|
+| Drepanocitos  | 0.005870841  |
+| Esferocitos  | 0.1640379 |
+| Normal  | 0.08806262  |
+
+Note que, aunque se tiene que el LDA tiene un error un poco más bajo, el error de clasificar de forma erronea un globulo como normal es 1%  más que la del error con QDA, lo cual hace que el modelo QDA sea mejor puesto que reduce la probabilidad de clasificar erroneamente un globulo normal, aun siendo que este tiene un mayor error.
+
+
+Ahora bien, teniendo esto, haremos un k-means clustering con k = 3 puesto que se tienen 3 etiquetas para los globulos rojos.
+
+```{r}
+set.seed(3)
+km.out = kmeans (pca.dat$scores[,1:2] ,3 , nstart =20, )
+```
+
+Ahora, veamos los resultados de dicho clustering. Primero, veremos las etiquetas del clustering para cada observación.
+
+```{r}
+
+head(km.out$cluster)
+
+```
+Ahora veamos como se ven en realidad los clusters.
+
+```{r}
+
+plot(pca.dat$scores[,1:2] , col =( km.out$cluster +1) , main =" K-Means Clustering Results with K =3" , xlab ="" , ylab ="" , pch =20 , cex =1)
+```
+
+##Preguntar si tiene sentido hacer el análisis del error del clustering según las etiquetas dadas por el kmeans()
+
+```{r}
+km.out$size
+```
+Ahora, veamos la clasificación ya dada por los datos
+
+```{r}
+summary(dat$etiquetas)
+```
+Observe que el error de las etiquetas dadas por el clustering es el siguiente. Cabe mencionar que el error de cada uno de las etiquetas se puede presentar puesto que aunque no se tiene conocimiento de que etiqueta del cluster representa la etiqueta dada en los datos, la cantidad de observaciones para cada una de las etiquetas de los datos es 552, por lo que la representación de la etiqueta del cluster no es relevante.
+
+```{r}
+
+print("Error of tag: ")
+(cluster_tag_error <- abs(km.out$size - 552)/552)
+print("Error total: ")
+(cluster_error <- sum(cluster_tag_error))
+
+```
+Teniendo que el error total es de casi el 37%, podemos asegurar que dicha clasificación de cada una de las observaciones no es confiable puesto que un poco más del 60% están clasificados correctamente.
+
+
+Ahora, veamos la matriz de correlación.
+
+```{r}
+
+S <- cov(dat[,2:29])
+
+```
+
+```{r}
+
+#plot(dat$Circularity,dat$Eccentricity)
+
+reg <- lm(Circularity ~ Elongation+Eccentricity+Extent, data = dat)
+summary(reg)
+
+reg <- lm(Circularity ~ Elongation*Eccentricity*Extent, data = dat)
+summary(reg)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Veammos la correlación de las variables.
+
+```{r}
+res <- cor(dat[,2:29], method="pearson")
+corrplot::corrplot(res, method= "color", order = "hclust", tl.pos = 'n')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ahora bien, dejando lo anterior un poco al lado, haremos un análisis de factores de modo que nos demos cuenta que tanto aporta cada variable a cada factor y determinar que mide cada uno de los factores.
+
+```{r}
+X <- as.matrix(dat[,2:29])
+
+(fit2factor <- factanal(X,factors = 4,rotation="none") # usa MLE
+plot(fit2factor$scores)
+
+```
+
+
+
+
+
+
+
+
+
