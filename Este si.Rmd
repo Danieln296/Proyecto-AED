@@ -1,0 +1,312 @@
+---
+title: "Red Blood Cells Analysis"
+author: "Salomé Viana & Daniel Navarrete"
+date: "29/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#RED BLOOD CELLS
+
+```{r}
+library(caret)
+```
+
+
+
+```{r}
+
+dat <- read.csv("RBC_Drepanocitos_Esferocitos.csv", header = TRUE)
+dat$etiquetas <- as.factor(dat$etiquetas)
+
+```
+
+Veamos el histograma de los datos 
+
+```{r}
+dat_num <- scale(as.matrix(dat[,2:29])) #datos numéricos
+hist(dat_num)
+
+```
+
+Note que el histograma nos da una previsualización de la distribución de los datos. Como se puede evidenciar en este, muy probablemente los datos siguen una distribución nornmal. 
+
+Ahora, veamos el Q-Q Plot
+
+```{r}
+
+qqnorm(dat_num)
+qqline(dat_num, col = "steelblue", lwd = 2)
+
+```
+
+Observe que la mayoría de las observaciones están sobre la linea del Q-Q Plot, y teniendo en cuenta que son más de 1600 de estas. 
+
+## completar prueba de distribución normal
+
+```{r}
+library(psych)
+pairs.panels(dat_num[,1:8], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+             )
+```
+
+
+##Análisis de Componentes Principales
+
+```{r}
+
+pca.dat <- princomp(dat[,2:29], cor = TRUE)
+summary(pca.dat)
+
+```
+
+Observe que son necesarias 8 componentes principales para obtener el 92% de la varianza de los datos.
+
+```{r}
+
+plot(cumsum( pca.dat$sdev^2 / sum(pca.dat$sdev^2)), type="b", ylab = "Proporción de Varianza Acumulada", xlab = "Componente Principa")
+
+```
+
+De igual forma, al graficar la varianza acumulada de las componentes principales podemos afirmar de igual forma que se necesitan al menos 8 componentes principales de tal forma que la varianza acumulada sea mayor al 90%
+
+Ahora, veamos que significan cada una de las 8 componentes principales, es decir que representan, de acuerdo a los datos, las componentes principales.
+
+```{r}
+
+(pca.loadings <- pca.dat$loadings)
+
+```
+
+##Análisis Componentes Principales
+
+#Primera Componente Principal
+
+Eccentricity, Major Axis Length, Circularity, Elongation, roundnessCH
+
+La primera componente principal tiene como variables que más aportan a esta componente a Eccentricity, Major Axis Length, Circularity, Elongation y roundnessCH. Lo cual quiere decir, que muy probablemente a medida que alguna de estas variables disminuya o crezca, las demás se comportaran de manera similar. Ahora bien, teniendo en cuenta que esta componente se ve afectada primordialmente por las variables previamente expuestas, podemos determinar que esta componente principal representa la geometría del glóbulo puesto que estos descriptores nos dan información acerca de que tan largo es el eje mayor del glóbulo, que tan circular y elongado es y la excentricidad del mismo. Así pues, esta componente principal está relacionada directamente con estos descriptores, por lo que se puede afirmar que representa la geometría del glóbulo.
+
+
+#Segunda Componente Principal
+
+Std_Green, Std_Red, Std_Blue
+
+Ahora bien, dados los coeficientes de cada una de las variables para esta componente principal, podemos evidenciar que esta se ve afectada mayormente por los tres descriptores que evaluan la simetría estadística de los datos, es decir, que tan bien distribuidos están alrededor de la media. Es decir que esta componente representa que tan equitativamente distribuidos están los datos alrededor de las medias.
+
+#Tercera Componente Principal
+
+Skewness_G, Skewness_R, Skewness_B, Kurtosis_B
+
+La tercera componente principal tiene como descriptores influyentes el Skewness_G, Skewness_R, Skewness_B y Kurtosis_B, con estos primeros tres una influencia muy parecida. Sin embargo, el descriptor Kurtosis_B influye más a esta componente que cada uno de los otro tres descriptores, sin embargo, aunque sea el que más influye, podemos definir que esta componente representa la falta de simetría de los datos con respecto a el color. Es decir, mide la simetría del color en los datos. No obstante, podemos llegar a ser más específicos con respecto a lo que mide esta componente, pues como se tiene que el descriptor Skewness_B y Kurtosis_B influyen en esta, de manera específica podemos determinar que esta componente representa, en particular, la simetría del color azul de la muestra con respecto a la media.
+
+#Cuarta Componente Principal
+
+Skewness_R, Kurtosis_G, Kurtosis_R
+
+En la cuarta componente principal tenemos que los descriptores que más afectan a esta son: Skewness_R, Kurtosis_G y Kurtosis_R. Note que en esta componente tenemos los descriptores Skewness_R y Kurtosis_R, los cuales miden la simetría y la forma de la distribución que siguen los datos con respecto al color rojo de los glóbulos observados. Por lo que podemos establecer que esta componente representa la distribución del color rojo en la muestra.
+
+
+#Quinta Componente Principal
+
+Area, Perimeter, MinorAxisLength
+
+Ahora bien, la quinta componente principal se ve afectada por el Area, Perimeter y MinorAxisLength, es decir que a medidad que el area, el perímetro y el minorAxisLenght, que claramente cambian de la misma manera, está componente va a cambiar con ellos. Por lo tanto, podemos afirmar que esta componente representa la dimensión del glóbulo.
+
+#Sexta Componente Principal
+
+convexity
+
+En esta sexta componente principal, la convexidad es el descriptor que más aporta, y teniendo en cuenta que solo hay un descriptor influyente es claro que esta componente principal representa la convexidad del glóbulo.
+
+#Séptima Componente Principal
+
+EllipVariance
+
+Al igual que la sexta componente principal tenemos que el descriptor que más aporta a esta componente casi 4 veces más que los otros es el "EllipVariance" el cual describe la varianza 
+
+##REVISAR
+
+#Octava Componente Principal
+
+Mean_Green, Mean_Red, Mean_Blue
+
+Por último, la octava componente principal tiene como descriptores más influyentes a: Mean_Green, Mean_Red y Mean_Blue. Lo cual quiere decir que esta componente principal representa la media del color de los glóbulos, ya que tiene en cuenta, en su mayoría y con mayor peso a las medías de los valores para cada color de los glóbulos observados.
+
+
+
+
+## LDA & QDA
+
+Primero, cargamos las librería MASS para utilizar los métodos lda y qda de esta, y establecemos una semilla de forma que los datos no cambien.
+
+```{r}
+library(MASS)
+
+set.seed(3)
+```
+
+Ahora, dividimos los datos numéricos entre un conjunto de entrenamiento y otro de validación.
+
+```{r}
+
+(size <- floor(0.7* nrow(dat)) )
+
+train_id <- sample(seq_len(nrow(dat)), size = size)
+
+train <- dat[train_id,]
+test <- dat[-train_id, ]
+
+```
+Así pues, tenemos un conjunto del 70% de los datos para utilizar como conjunto de entrenamiento y el restante 30% para la validación y de esta manera utilizar los métodos de discriminación LDA y QDA para obtener una clasificación de los datos y determinar por comparación con las etiquetas el error de dicha discriminación.
+
+Así pues, empezaremos con la discriminación lineal LDA.
+```{r}
+
+lda.fit <- lda(etiquetas ~ ., data = train)
+lda.fit
+
+```
+Obtenemos la predicción
+
+```{r}
+
+lda.pred_total <- predict(lda.fit, test)
+
+```
+
+Veamos la matriz de confusión
+
+```{r}
+
+(conf.matrix.lda <- table(test$etiquetas, lda.pred_total$class))
+
+```
+Ahora bien, calculemos el error de la de la clasificación. Veamos primero el porcentaje de acierto de esta discriminación.
+
+```{r}
+
+(successful_rate.lda <- sum(diag(conf.matrix.lda)) / nrow(test))
+
+```
+Calculando el error obtenemos que:
+
+```{r}
+
+(error.lda <- 1 - successful_rate.lda)
+
+```
+
+Así pues, obtenemos que el error de clasificación de los datos para un conjunto de entrenamiento del 70% de estos es de un poco más del 5%, lo cual es muy poco teniendo en cuenta la cantidad de observaciones dadas. Cabe aclarar que esta discriminación fue realizada con los valores por defecto de LDA.
+
+Ahora bien, utilizando el mismo conjunto de datos de entrenamiento y de validación, vamos a realizar la discriminación lineal (LDA) pero utilizando el método "t" que hace una estimación robusta de los estimadores basada en una distribución $t$.
+
+```{r}
+
+lda.fit2 <- lda(etiquetas ~ ., data = train, method = "t")
+
+lda.pred_total2 <- predict(lda.fit2, test)
+
+print("Matriz de confusión")
+(conf.matrix.lda2 <- table(test$etiquetas, lda.pred_total2$class))
+print("Proporción de éxito")
+(successful_rate.lda2 <- sum(diag(conf.matrix.lda2)) / nrow(test))
+print("Error de LDA usando el método de estimación t")
+(error.lda2 <- 1 - successful_rate.lda2)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+plot(dat_num)
+```
+
+
+```{r}
+
+library(MASS)
+
+```
+
+```{r}
+
+normal_dat <- boxcox(dat_num[1,])
+
+```
+
+
+```{r}
+preproc <- preProcess(dat_num[,1:28], method = c("center", "scale"))
+norm <- predict(preproc, dat_num[,1:28])
+
+hist(norm)
+```
+
+Observe que al estandarizar las variables, utilizando el método de la librería "caret", obtenemos el histograma anterior que muestra que muy probablemente los datos siguen una distribución normal puesto que se puede trazar una curva de Gauss angosta y esta tendrá la mayoría de los datos distribuídos en ella.
+
+Ahora bien, teniendo en cuenta que los datos siguen una distribución normal, o
+
+
+
+
+
+
+
+
+
